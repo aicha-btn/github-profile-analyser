@@ -83,47 +83,58 @@ export function generateRecommendations(
     )
   }
 
-  if (repoSummary.reposWithReadme >= Math.max(1, Math.ceil(repoSummary.analyzedRepoCount / 2))) {
-    pushUnique(strengths, 'La présence de README est visible sur une part importante des répos analysés.')
+  if (repoSummary.readmeStrategy === 'none') {
+    pushUnique(
+      strengths,
+      'L’analyse rapide privilégie les signaux visibles du profil et des répos pour limiter les appels GitHub.',
+    )
+    pushUnique(
+      checklist,
+      'Lancer ensuite une analyse approfondie pour auditer les README des projets les plus importants.',
+    )
   } else {
-    pushUnique(
-      improvements,
-      'Les README sont encore trop peu visibles sur les répos analysés.',
-    )
-    pushUnique(
-      checklist,
-      'Ajouter ou améliorer les README des 3 projets les plus importants avec objectif, stack, installation et captures.',
-    )
-    pushUnique(
-      checklist,
-      'Ajouter une section "problème résolu" dans les README pour expliquer la valeur du projet.',
-    )
-  }
-
-  if (repoSummary.analyzedReadmeCount > 0) {
-    if (repoSummary.readmeAverageScore >= 8) {
-      pushUnique(
-        strengths,
-        'Les README analysés sont détaillés et bien structurés, avec un niveau déjà professionnel.',
-      )
-    } else if (repoSummary.readmeAverageScore >= 5) {
-      pushUnique(
-        strengths,
-        'Les README analysés sont corrects et apportent déjà un bon niveau de contexte.',
-      )
-      pushUnique(
-        checklist,
-        'Ajouter des captures, une roadmap ou une section installation sur les README encore intermédiaires.',
-      )
+    if (repoSummary.reposWithReadme >= Math.max(1, Math.ceil(repoSummary.analyzedRepoCount / 2))) {
+      pushUnique(strengths, 'La présence de README est visible sur une part importante des répos analysés.')
     } else {
       pushUnique(
         improvements,
-        'Le contenu des README analysés reste encore trop basique pour vraiment valoriser les projets.',
+        'Les README sont encore trop peu visibles sur les répos analysés.',
       )
       pushUnique(
         checklist,
-        'Améliorer les README prioritaires avec installation, stack, fonctionnalités, démo et améliorations futures.',
+        'Ajouter ou améliorer les README des 3 projets les plus importants avec objectif, stack, installation et captures.',
       )
+      pushUnique(
+        checklist,
+        'Ajouter une section "problème résolu" dans les README pour expliquer la valeur du projet.',
+      )
+    }
+
+    if (repoSummary.analyzedReadmeCount > 0) {
+      if (repoSummary.readmeAverageScore >= 8) {
+        pushUnique(
+          strengths,
+          'Les README analysés sont détaillés et bien structurés, avec un niveau déjà professionnel.',
+        )
+      } else if (repoSummary.readmeAverageScore >= 5) {
+        pushUnique(
+          strengths,
+          'Les README analysés sont corrects et apportent déjà un bon niveau de contexte.',
+        )
+        pushUnique(
+          checklist,
+          'Ajouter des captures, une roadmap ou une section installation sur les README encore intermédiaires.',
+        )
+      } else {
+        pushUnique(
+          improvements,
+          'Le contenu des README analysés reste encore trop basique pour vraiment valoriser les projets.',
+        )
+        pushUnique(
+          checklist,
+          'Améliorer les README prioritaires avec installation, stack, fonctionnalités, démo et améliorations futures.',
+        )
+      }
     }
   }
 

@@ -4,8 +4,8 @@ export function LoadingState() {
       <div className="loading-spinner" aria-hidden="true" />
       <h2>Analyse en cours</h2>
       <p>
-        Portfolio Pulse récupère le profil GitHub, parcourt tous les répos publics et inspecte
-        chaque README détecté.
+        Github Analyzer récupère le profil GitHub, analyse les répos publics et n’inspecte les
+        README que si tu demandes une lecture approfondie.
       </p>
     </section>
   )

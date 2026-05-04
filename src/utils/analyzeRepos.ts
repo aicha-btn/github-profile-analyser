@@ -36,6 +36,12 @@ type EnhancedAnalyzedRepo = AnalyzedRepo & {
   standoutSignalsCount: number
 }
 
+interface AnalyzeReposOptions {
+  readmeStrategy?: 'none' | 'top-ranked'
+  readmeInspectedRepoCount?: number
+  readmeInspectionLimit?: number
+}
+
 function getSelectionLabel(
   repo: GithubRepoWithReadme,
   detectedKeywords: string[],
@@ -159,9 +165,7 @@ function getFeaturePriority(repo: GithubRepo): number {
   return score
 }
 
-export function sortReposByPortfolioValue(
-  repos: GithubRepoWithReadme[],
-): GithubRepoWithReadme[] {
+export function sortReposByPortfolioValue<T extends GithubRepo>(repos: T[]): T[] {
   return [...repos]
     .sort((firstRepo, secondRepo) => {
       const priorityDiff = getFeaturePriority(secondRepo) - getFeaturePriority(firstRepo)
@@ -174,7 +178,19 @@ export function sortReposByPortfolioValue(
     })
 }
 
-export function analyzeRepos(repos: GithubRepoWithReadme[]): RepoAnalysisSummary {
+export function getReadmeInspectionCandidates(repos: GithubRepo[], limit: number): GithubRepo[] {
+  return sortReposByPortfolioValue(repos).slice(0, limit)
+}
+
+export function analyzeRepos(
+  repos: GithubRepoWithReadme[],
+  options: AnalyzeReposOptions = {},
+): RepoAnalysisSummary {
+  const {
+    readmeStrategy = 'top-ranked',
+    readmeInspectedRepoCount = repos.length,
+    readmeInspectionLimit = repos.length,
+  } = options
   const sortedRepos = sortReposByPortfolioValue(repos)
   const enhancedAnalyzedRepos: EnhancedAnalyzedRepo[] = sortedRepos.map((repo) => {
     const detectedKeywords = detectTechKeywords(repo)
@@ -252,6 +268,9 @@ export function analyzeRepos(repos: GithubRepoWithReadme[]): RepoAnalysisSummary
     }),
     analyzedRepoCount: enhancedAnalyzedRepos.length,
     totalRepoCount: enhancedAnalyzedRepos.length,
+    readmeStrategy,
+    readmeInspectedRepoCount,
+    readmeInspectionLimit,
     reposWithDescription: enhancedAnalyzedRepos.filter((repo) => Boolean(repo.description?.trim()))
       .length,
     reposWithReadme: enhancedAnalyzedRepos.filter((repo) => repo.hasReadme).length,

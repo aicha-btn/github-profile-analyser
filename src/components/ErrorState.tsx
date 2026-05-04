@@ -27,7 +27,7 @@ export function ErrorState({
 
       <ul className="signal-list">
         <li>Vérifie que le pseudo GitHub existe et qu’il est public.</li>
-        <li>Si GitHub limite les requêtes, attends un peu avant de recommencer.</li>
+        <li>Si GitHub limite les requêtes, attends un peu ou repasse sur une analyse rapide.</li>
         <li>Un nouveau clic sur “Réessayer” relance exactement la même analyse.</li>
       </ul>
 

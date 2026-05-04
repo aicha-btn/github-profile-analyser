@@ -1,4 +1,4 @@
-# Portfolio Pulse Roadmap
+# Github Analyzer Roadmap
 
 Ce document suit l'avancement version par version. Seules `V0` et `V1` sont autorisées pour l'instant.
 
@@ -14,7 +14,7 @@ Objectif : avoir une base React TypeScript propre et prête à développer.
 - [x] Préparer le README de base
 - [x] Créer `ROADMAP.md` avec toutes les versions
 
-## V1 — MVP Portfolio Pulse
+## V1 — MVP Github Analyzer
 
 Objectif : créer une première version complète, utilisable et démontrable.
 

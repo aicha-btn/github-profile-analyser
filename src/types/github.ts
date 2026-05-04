@@ -75,6 +75,9 @@ export interface RepoAnalysisSummary {
   analyzedRepos: AnalyzedRepo[]
   analyzedRepoCount: number
   totalRepoCount: number
+  readmeStrategy: 'none' | 'top-ranked'
+  readmeInspectedRepoCount: number
+  readmeInspectionLimit: number
   reposWithDescription: number
   reposWithReadme: number
   analyzedReadmeCount: number
@@ -111,11 +114,20 @@ export interface RecommendationGroups {
   checklist: string[]
 }
 
+export type AnalysisDepth = 'quick' | 'deep'
+
+export interface AnalysisMetadata {
+  depth: AnalysisDepth
+  fromCache: boolean
+  cachedAt: string | null
+}
+
 export interface PortfolioAnalysis {
   user: GithubUser
   repoSummary: RepoAnalysisSummary
   score: ScoreResult
   recommendations: RecommendationGroups
+  metadata: AnalysisMetadata
   source: 'github' | 'demo'
 }
 

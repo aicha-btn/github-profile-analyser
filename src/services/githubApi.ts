@@ -2,6 +2,7 @@ import type { GithubRepo, GithubRepoWithReadme, GithubUser } from '../types/gith
 
 const GITHUB_API_BASE = 'https://api.github.com'
 const README_FETCH_CONCURRENCY = 6
+export const DEFAULT_DEEP_README_LIMIT = 5
 
 export class GithubApiError extends Error {
   status: number
@@ -168,11 +169,21 @@ export async function getGithubRepos(username: string): Promise<GithubRepo[]> {
 
 export async function attachReadmeAvailability(
   repos: GithubRepo[],
+  readmeTargetRepoIds: Set<number>,
 ): Promise<GithubRepoWithReadme[]> {
-  const readmeChecks = await mapWithConcurrency(repos, README_FETCH_CONCURRENCY, async (repo) => ({
-    repoId: repo.id,
-    ...(await fetchReadmeData(repo.owner.login, repo.name)),
-  }))
+  if (readmeTargetRepoIds.size === 0) {
+    return createReposWithoutReadmeInspection(repos)
+  }
+
+  const targetRepos = repos.filter((repo) => readmeTargetRepoIds.has(repo.id))
+  const readmeChecks = await mapWithConcurrency(
+    targetRepos,
+    Math.min(README_FETCH_CONCURRENCY, Math.max(1, readmeTargetRepoIds.size)),
+    async (repo) => ({
+      repoId: repo.id,
+      ...(await fetchReadmeData(repo.owner.login, repo.name)),
+    }),
+  )
 
   const readmeMap = new Map<number, { hasReadme: boolean; readmeContent: string | null }>()
 
@@ -187,5 +198,13 @@ export async function attachReadmeAvailability(
     ...repo,
     hasReadme: readmeMap.get(repo.id)?.hasReadme ?? false,
     readmeContent: readmeMap.get(repo.id)?.readmeContent ?? null,
+  }))
+}
+
+export function createReposWithoutReadmeInspection(repos: GithubRepo[]): GithubRepoWithReadme[] {
+  return repos.map((repo) => ({
+    ...repo,
+    hasReadme: false,
+    readmeContent: null,
   }))
 }

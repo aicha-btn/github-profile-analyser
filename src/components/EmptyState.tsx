@@ -47,6 +47,7 @@ export function EmptyState({ onUseExample, onUseDemo }: EmptyStateProps) {
 
         <ul className="signal-list">
           <li>Le dashboard analyse tous les répos publics du profil renseigné.</li>
+          <li>Une analyse rapide évite les appels README pour préserver la limite GitHub.</li>
           <li>Le score détaille les points forts du profil et les axes à améliorer.</li>
           <li>L’objectif est de produire un diagnostic clair, utile et montrable.</li>
         </ul>

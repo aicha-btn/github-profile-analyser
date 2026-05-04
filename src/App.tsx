@@ -10,19 +10,23 @@ import { ScoreCard } from './components/ScoreCard'
 import { SearchForm } from './components/SearchForm'
 import { type StatItem } from './components/StatsGrid'
 import {
+  DEFAULT_DEEP_README_LIMIT,
   GithubApiError,
   attachReadmeAvailability,
+  createReposWithoutReadmeInspection,
   getGithubRepos,
   getGithubUser,
 } from './services/githubApi'
 import { createDemoAnalysis } from './data/demoAnalysis'
 import type {
+  AnalysisDepth,
   AnalysisMode,
   FetchStatus,
   PortfolioAnalysis,
   RecruiterGoal,
 } from './types/github'
-import { analyzeRepos } from './utils/analyzeRepos'
+import { analyzeRepos, getReadmeInspectionCandidates } from './utils/analyzeRepos'
+import { readCachedAnalysis, writeCachedAnalysis } from './utils/analysisCache'
 import { calculateScore } from './utils/calculateScore'
 import { generateRecommendations } from './utils/generateRecommendations'
 import {
@@ -83,7 +87,7 @@ function getBootstrapConfig(): BootstrapConfig {
   if (shouldUseDemo) {
     return {
       mode: 'demo',
-      username: urlUsername || 'portfolio-pulse-demo',
+      username: urlUsername || 'github-analyzer-demo',
       validationMessage: null,
     }
   }
@@ -106,20 +110,48 @@ function getBootstrapConfig(): BootstrapConfig {
 async function buildPortfolioAnalysis(
   username: string,
   recruiterGoal: RecruiterGoal,
+  analysisDepth: AnalysisDepth,
 ): Promise<PortfolioAnalysis> {
+  const cachedAnalysis = readCachedAnalysis(username, analysisDepth)
+
+  if (cachedAnalysis) {
+    return applyRecruiterGoalToAnalysis(cachedAnalysis, recruiterGoal)
+  }
+
   const [user, repos] = await Promise.all([getGithubUser(username), getGithubRepos(username)])
-  const reposWithReadme = await attachReadmeAvailability(repos)
-  const repoSummary = analyzeRepos(reposWithReadme)
+  const repoSummary =
+    analysisDepth === 'quick'
+      ? analyzeRepos(createReposWithoutReadmeInspection(repos), {
+          readmeStrategy: 'none',
+          readmeInspectedRepoCount: 0,
+          readmeInspectionLimit: 0,
+        })
+      : await (async () => {
+          const readmeTargets = getReadmeInspectionCandidates(repos, DEFAULT_DEEP_README_LIMIT)
+          const readmeTargetIds = new Set(readmeTargets.map((repo) => repo.id))
+          const reposWithReadme = await attachReadmeAvailability(repos, readmeTargetIds)
+
+          return analyzeRepos(reposWithReadme, {
+            readmeStrategy: 'top-ranked',
+            readmeInspectedRepoCount: readmeTargets.length,
+            readmeInspectionLimit: DEFAULT_DEEP_README_LIMIT,
+          })
+        })()
   const score = calculateScore(user, repoSummary, recruiterGoal)
   const recommendations = generateRecommendations(user, repoSummary, score, recruiterGoal)
 
-  return {
+  return writeCachedAnalysis(username, analysisDepth, {
     user,
     repoSummary,
     score,
     recommendations,
+    metadata: {
+      depth: analysisDepth,
+      fromCache: false,
+      cachedAt: null,
+    },
     source: 'github',
-  }
+  })
 }
 
 function applyRecruiterGoalToAnalysis(
@@ -152,8 +184,14 @@ function createStats(analysis: PortfolioAnalysis): StatItem[] {
     },
     {
       label: 'README inspectés',
-      value: `${repoSummary.analyzedReadmeCount}/${repoSummary.reposWithReadme}`,
-      hint: 'Chaque README détecté est inspecté en profondeur.',
+      value:
+        repoSummary.readmeStrategy === 'none'
+          ? '0'
+          : `${repoSummary.analyzedReadmeCount}/${repoSummary.readmeInspectedRepoCount}`,
+      hint:
+        repoSummary.readmeStrategy === 'none'
+          ? 'Analyse rapide : aucun README inspecté pour préserver la limite GitHub.'
+          : `Analyse approfondie : README limités aux ${repoSummary.readmeInspectionLimit} répos les plus pertinents.`,
     },
     {
       label: 'Activité récente',
@@ -161,9 +199,15 @@ function createStats(analysis: PortfolioAnalysis): StatItem[] {
       hint: 'Nombre de répos mis à jour dans les 6 derniers mois.',
     },
     {
-      label: 'Répos avec README',
-      value: String(repoSummary.reposWithReadme),
-      hint: 'Nombre de répos publics qui exposent déjà un README détectable.',
+      label: 'README détectés',
+      value:
+        repoSummary.readmeStrategy === 'none'
+          ? 'Non inspecté'
+          : String(repoSummary.reposWithReadme),
+      hint:
+        repoSummary.readmeStrategy === 'none'
+          ? 'Cette donnée apparaît seulement pendant une analyse approfondie.'
+          : 'Nombre de README réellement détectés dans les répos inspectés.',
     },
     {
       label: 'Langages visibles',
@@ -173,10 +217,15 @@ function createStats(analysis: PortfolioAnalysis): StatItem[] {
     {
       label: 'Qualité README',
       value:
-        repoSummary.analyzedReadmeCount > 0
+        repoSummary.readmeStrategy === 'none'
+          ? 'Mode rapide'
+          : repoSummary.analyzedReadmeCount > 0
           ? `${repoSummary.readmeAverageScore}/10`
           : 'Non analysé',
-      hint: 'Score moyen des README réellement inspectés.',
+      hint:
+        repoSummary.readmeStrategy === 'none'
+          ? 'Le score README est neutralisé tant que tu restes en analyse rapide.'
+          : 'Score moyen des README réellement inspectés.',
     },
   ]
 }
@@ -189,6 +238,7 @@ function App() {
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>(
     bootstrapConfig.mode === 'demo' ? 'demo' : 'github',
   )
+  const [analysisDepth, setAnalysisDepth] = useState<AnalysisDepth>('quick')
   const [recruiterGoal, setRecruiterGoal] = useState<RecruiterGoal>('alternance-frontend')
   const [lastSubmittedUsername, setLastSubmittedUsername] = useState(
     bootstrapConfig.mode === 'idle' ? '' : bootstrapConfig.username,
@@ -207,13 +257,17 @@ function App() {
   )
   const hasBootstrappedFromUrl = useRef(false)
 
-  async function runAnalysis(nextUsername: string) {
+  async function runAnalysis(nextUsername: string, depthOverride?: AnalysisDepth) {
     setStatus('loading')
     setErrorMessage('')
     setAnalysis(null)
 
     try {
-      const result = await buildPortfolioAnalysis(nextUsername, recruiterGoal)
+      const result = await buildPortfolioAnalysis(
+        nextUsername,
+        recruiterGoal,
+        depthOverride ?? analysisDepth,
+      )
       setAnalysis(result)
       setStatus('success')
     } catch (error) {
@@ -263,7 +317,7 @@ function App() {
 
   function handleDemoSelection(nextUsername?: string) {
     const demoUsername =
-      nextUsername?.trim() || username.trim() || lastSubmittedUsername || 'portfolio-pulse-demo'
+      nextUsername?.trim() || username.trim() || lastSubmittedUsername || 'github-analyzer-demo'
 
     setAnalysisMode('demo')
     setUsername(demoUsername)
@@ -287,7 +341,7 @@ function App() {
         setErrorMessage('')
         setAnalysis(null)
 
-        void buildPortfolioAnalysis(bootstrapConfig.username, recruiterGoal)
+        void buildPortfolioAnalysis(bootstrapConfig.username, recruiterGoal, analysisDepth)
           .then((result) => {
             setAnalysis(result)
             setStatus('success')
@@ -298,7 +352,7 @@ function App() {
           })
       })
     }
-  }, [bootstrapConfig, recruiterGoal])
+  }, [analysisDepth, bootstrapConfig, recruiterGoal])
 
   const stats = analysis ? createStats(analysis) : []
   const recruiterProfile = getRecruiterProfile(recruiterGoal)
@@ -309,16 +363,42 @@ function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <div>
-          <p className="site-header__eyebrow">Portfolio Pulse</p>
-          <p className="site-header__tagline">
-            Transforme un profil GitHub en diagnostic d’employabilité développeur.
-          </p>
+        <div className="site-header__inner">
+          <a className="site-header__brand" href="#analyse">
+            <p className="site-header__eyebrow">Github Analyzer</p>
+            <p className="site-header__tagline">
+              Diagnostic GitHub orienté employabilité développeur.
+            </p>
+          </a>
+
+          <nav aria-label="Navigation principale" className="site-header__nav">
+            <a className="site-header__link" href="#analyse">
+              Analyse
+            </a>
+            <a className="site-header__link" href="#resultats">
+              Dashboard
+            </a>
+            <a className="site-header__link" href="#recruteur">
+              Lecture recruteur
+            </a>
+            <a className="site-header__link" href="#repos">
+              Répos
+            </a>
+          </nav>
+
+          <div className="site-header__stack" aria-label="Stack du projet">
+            <span className="site-header__stack-label">Stack</span>
+            <div className="site-header__stack-items">
+              <span className="site-header__stack-pill">React</span>
+              <span className="site-header__stack-pill">TypeScript</span>
+              <span className="site-header__stack-pill">GitHub API</span>
+            </div>
+          </div>
         </div>
       </header>
 
       <main className="page-content">
-        <section className="hero-section">
+        <section className="hero-section" id="analyse">
           <div className="hero-section__copy">
             <span className="eyebrow-chip">React + TypeScript + GitHub API</span>
             <h1>
@@ -336,6 +416,7 @@ function App() {
               validationMessage={validationMessage}
               isLoading={status === 'loading'}
               analysisMode={analysisMode}
+              analysisDepth={analysisDepth}
               recruiterGoal={recruiterGoal}
               recruiterProfiles={recruiterProfiles}
               onUsernameChange={(value) => {
@@ -348,6 +429,7 @@ function App() {
                 setAnalysisMode(mode)
                 setValidationMessage(null)
               }}
+              onAnalysisDepthChange={setAnalysisDepth}
               onRecruiterGoalChange={(goal) => {
                 setRecruiterGoal(goal)
 
@@ -369,6 +451,14 @@ function App() {
             <p>{recruiterProfile.description}</p>
             <ul className="signal-list">
               <li>Objectif visé : {recruiterProfile.label}</li>
+              <li>
+                Mode actif :{' '}
+                {analysisMode === 'demo'
+                  ? 'démo locale'
+                  : analysisDepth === 'quick'
+                    ? 'analyse rapide'
+                    : 'analyse approfondie'}
+              </li>
               <li>Qualité du profil GitHub : bio, lien portfolio, volume de répos publics</li>
               <li>Clarté des répos : description, README, nommage, fraîcheur</li>
               <li>Lisibilité portfolio : démos visibles, projets mis en avant, signaux métier</li>
@@ -401,16 +491,49 @@ function App() {
         ) : null}
 
         {status === 'success' && analysis ? (
-          <section className="results-section">
+          <section className="results-section" id="resultats">
             <div className="section-heading">
               <span className="eyebrow-chip">Dashboard résultat</span>
               <h2>Analyse terminée pour {analysis.user.name ?? analysis.user.login}</h2>
               <p>
                 {analysis.source === 'demo'
                   ? 'Tu consultes actuellement une démonstration locale. Elle sert à tester l’interface sans appeler l’API GitHub.'
-                  : 'Tous les répos publics du profil ont été analysés puis triés par pertinence portfolio pour rendre la lecture plus utile.'}
+                  : analysis.metadata.depth === 'quick'
+                    ? 'Analyse rapide : le score s’appuie sur le profil et les métadonnées des répos sans inspecter les README.'
+                    : `Analyse approfondie : les README sont limités aux ${analysis.repoSummary.readmeInspectionLimit} répos les plus pertinents pour préserver la limite GitHub.`}
               </p>
+              {analysis.source === 'github' &&
+              analysis.metadata.fromCache &&
+              analysis.metadata.cachedAt ? (
+                <p>
+                  Résultat chargé depuis le cache local. Dernière mise à jour :{' '}
+                  {new Intl.DateTimeFormat('fr-FR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  }).format(new Date(analysis.metadata.cachedAt))}
+                </p>
+              ) : null}
               <p>Lecture active : {recruiterProfile.label}</p>
+              {analysis.source === 'github' && analysis.metadata.depth === 'quick' ? (
+                <div className="link-row">
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => {
+                      const targetUsername = lastSubmittedUsername || username.trim()
+
+                      if (!targetUsername) {
+                        return
+                      }
+
+                      setAnalysisDepth('deep')
+                      void runAnalysis(targetUsername, 'deep')
+                    }}
+                  >
+                    Lancer une analyse approfondie
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="results-layout">
@@ -429,7 +552,7 @@ function App() {
               </section>
 
               {recruiterDiagnosis ? (
-                <section className="results-subsection">
+                <section className="results-subsection" id="recruteur">
                   <RecruiterLensCard
                     goal={recruiterGoal}
                     profile={recruiterProfile}
@@ -465,19 +588,27 @@ function App() {
               </section>
             </div>
 
-            <section className="repo-section">
+            <section className="repo-section" id="repos">
               <div className="section-heading">
                 <span className="eyebrow-chip">Tous les répos</span>
                 <h2>Répos analysés</h2>
                 <p>
-                  Portfolio Pulse analyse les {analysis.repoSummary.totalRepoCount} répos publics
+                  Github Analyzer analyse les {analysis.repoSummary.totalRepoCount} répos publics
                   du profil, puis les trie pour faire remonter en premier les projets les plus
                   convaincants, les plus récents ou les plus complets.
                 </p>
-                <p>
-                  Chaque README détecté est inspecté, ce qui donne un diagnostic plus complet mais
-                  peut consommer plus vite la limite GitHub non authentifiée.
-                </p>
+                {analysis.repoSummary.readmeStrategy === 'none' ? (
+                  <p>
+                    Cette vue reste volontairement légère : aucun README n’a été inspecté pour
+                    préserver les requêtes GitHub.
+                  </p>
+                ) : (
+                  <p>
+                    Les README sont inspectés seulement sur les{' '}
+                    {analysis.repoSummary.readmeInspectionLimit} répos les plus pertinents pour
+                    limiter les appels API.
+                  </p>
+                )}
                 <p className="scroll-hint">
                   Fais défiler horizontalement pour parcourir tous les répos du profil.
                 </p>

@@ -4,7 +4,7 @@ import { generateRecommendations } from '../utils/generateRecommendations'
 
 const baseDemoAnalysis: PortfolioAnalysis = {
   user: {
-    login: 'portfolio-pulse-demo',
+    login: 'github-analyzer-demo',
     name: 'Aicha Martin',
     avatar_url: 'https://avatars.githubusercontent.com/u/583231?v=4',
     bio: 'Developpeuse frontend junior orientee React, TypeScript et projets utiles.',
@@ -12,18 +12,18 @@ const baseDemoAnalysis: PortfolioAnalysis = {
     followers: 48,
     following: 21,
     created_at: '2022-09-12T10:00:00Z',
-    html_url: 'https://github.com/portfolio-pulse-demo',
-    blog: 'https://portfolio-pulse-demo.vercel.app',
+    html_url: 'https://github.com/github-analyzer-demo',
+    blog: 'https://github-analyzer-demo.vercel.app',
   },
   repoSummary: {
     analyzedRepos: [
       {
         id: 1,
-        name: 'portfolio-pulse',
-        full_name: 'portfolio-pulse-demo/portfolio-pulse',
+        name: 'github-analyzer',
+        full_name: 'github-analyzer-demo/github-analyzer',
         description: 'Dashboard React TypeScript pour analyser un profil GitHub et proposer un diagnostic portfolio.',
-        html_url: 'https://github.com/portfolio-pulse-demo/portfolio-pulse',
-        homepage: 'https://portfolio-pulse-demo.vercel.app',
+        html_url: 'https://github.com/github-analyzer-demo/github-analyzer',
+        homepage: 'https://github-analyzer-demo.vercel.app',
         language: 'TypeScript',
         stargazers_count: 6,
         forks_count: 1,
@@ -31,10 +31,10 @@ const baseDemoAnalysis: PortfolioAnalysis = {
         fork: false,
         archived: false,
         owner: {
-          login: 'portfolio-pulse-demo',
+          login: 'github-analyzer-demo',
         },
         hasReadme: true,
-        readmeContent: '# Portfolio Pulse\n## Installation\nnpm install\n## Tech Stack\nReact TypeScript Vite\n## Features\nAnalyse GitHub\n## Screenshots\n![demo](demo.png)\n## Roadmap\nMore recruiter modes',
+        readmeContent: '# Github Analyzer\n## Installation\nnpm install\n## Tech Stack\nReact TypeScript Vite\n## Features\nAnalyse GitHub\n## Screenshots\n![demo](demo.png)\n## Roadmap\nMore recruiter modes',
         hasDemo: true,
         hasReadableName: true,
         hasClearDescription: true,
@@ -62,9 +62,9 @@ const baseDemoAnalysis: PortfolioAnalysis = {
       {
         id: 2,
         name: 'alternance-tracker',
-        full_name: 'portfolio-pulse-demo/alternance-tracker',
+        full_name: 'github-analyzer-demo/alternance-tracker',
         description: 'Application de suivi de candidatures avec filtres, statuts et tableau de bord responsive.',
-        html_url: 'https://github.com/portfolio-pulse-demo/alternance-tracker',
+        html_url: 'https://github.com/github-analyzer-demo/alternance-tracker',
         homepage: 'https://alternance-tracker-demo.vercel.app',
         language: 'TypeScript',
         stargazers_count: 4,
@@ -73,7 +73,7 @@ const baseDemoAnalysis: PortfolioAnalysis = {
         fork: false,
         archived: false,
         owner: {
-          login: 'portfolio-pulse-demo',
+          login: 'github-analyzer-demo',
         },
         hasReadme: true,
         readmeContent: '# Alternance Tracker\n## Installation\nnpm install\n## Technologies\nReact TypeScript\n## Features\nBoard de candidatures\n## Demo\nhttps://alternance-tracker-demo.vercel.app',
@@ -104,9 +104,9 @@ const baseDemoAnalysis: PortfolioAnalysis = {
       {
         id: 3,
         name: 'weather-brief',
-        full_name: 'portfolio-pulse-demo/weather-brief',
+        full_name: 'github-analyzer-demo/weather-brief',
         description: 'Mini app météo connectée à une API publique avec états loading, error et success.',
-        html_url: 'https://github.com/portfolio-pulse-demo/weather-brief',
+        html_url: 'https://github.com/github-analyzer-demo/weather-brief',
         homepage: 'https://weather-brief-demo.netlify.app',
         language: 'JavaScript',
         stargazers_count: 2,
@@ -115,7 +115,7 @@ const baseDemoAnalysis: PortfolioAnalysis = {
         fork: false,
         archived: false,
         owner: {
-          login: 'portfolio-pulse-demo',
+          login: 'github-analyzer-demo',
         },
         hasReadme: true,
         readmeContent: '# Weather Brief\n## Features\nMeteo par ville\n## Stack\nJavaScript API\n## Preview\nCapture decran disponible',
@@ -146,9 +146,9 @@ const baseDemoAnalysis: PortfolioAnalysis = {
       {
         id: 4,
         name: 'quittance-app',
-        full_name: 'portfolio-pulse-demo/quittance-app',
+        full_name: 'github-analyzer-demo/quittance-app',
         description: 'Interface simple pour générer une quittance de loyer avec formulaire clair et export PDF.',
-        html_url: 'https://github.com/portfolio-pulse-demo/quittance-app',
+        html_url: 'https://github.com/github-analyzer-demo/quittance-app',
         homepage: '',
         language: 'TypeScript',
         stargazers_count: 1,
@@ -157,7 +157,7 @@ const baseDemoAnalysis: PortfolioAnalysis = {
         fork: false,
         archived: false,
         owner: {
-          login: 'portfolio-pulse-demo',
+          login: 'github-analyzer-demo',
         },
         hasReadme: true,
         readmeContent: null,
@@ -188,9 +188,9 @@ const baseDemoAnalysis: PortfolioAnalysis = {
       {
         id: 5,
         name: 'ui-component-lab',
-        full_name: 'portfolio-pulse-demo/ui-component-lab',
+        full_name: 'github-analyzer-demo/ui-component-lab',
         description: 'Collection de composants UI responsives pour expérimenter cartes, formulaires et layouts.',
-        html_url: 'https://github.com/portfolio-pulse-demo/ui-component-lab',
+        html_url: 'https://github.com/github-analyzer-demo/ui-component-lab',
         homepage: '',
         language: 'CSS',
         stargazers_count: 1,
@@ -199,7 +199,7 @@ const baseDemoAnalysis: PortfolioAnalysis = {
         fork: false,
         archived: false,
         owner: {
-          login: 'portfolio-pulse-demo',
+          login: 'github-analyzer-demo',
         },
         hasReadme: false,
         readmeContent: null,
@@ -230,9 +230,9 @@ const baseDemoAnalysis: PortfolioAnalysis = {
       {
         id: 6,
         name: 'api-debug-notes',
-        full_name: 'portfolio-pulse-demo/api-debug-notes',
+        full_name: 'github-analyzer-demo/api-debug-notes',
         description: 'Notes techniques et mini exemples autour du debug frontend et de la consommation d API.',
-        html_url: 'https://github.com/portfolio-pulse-demo/api-debug-notes',
+        html_url: 'https://github.com/github-analyzer-demo/api-debug-notes',
         homepage: '',
         language: 'Markdown',
         stargazers_count: 0,
@@ -241,7 +241,7 @@ const baseDemoAnalysis: PortfolioAnalysis = {
         fork: false,
         archived: false,
         owner: {
-          login: 'portfolio-pulse-demo',
+          login: 'github-analyzer-demo',
         },
         hasReadme: true,
         readmeContent: null,
@@ -272,6 +272,9 @@ const baseDemoAnalysis: PortfolioAnalysis = {
     ],
     analyzedRepoCount: 6,
     totalRepoCount: 6,
+    readmeStrategy: 'top-ranked',
+    readmeInspectedRepoCount: 6,
+    readmeInspectionLimit: 6,
     reposWithDescription: 6,
     reposWithReadme: 5,
     analyzedReadmeCount: 3,
@@ -350,6 +353,11 @@ const baseDemoAnalysis: PortfolioAnalysis = {
       'Préparer un projet supplémentaire autour de formulaires complexes ou d’accessibilité frontend.',
       'Conserver une fréquence de mises à jour visible sur au moins un projet vitrine.',
     ],
+  },
+  metadata: {
+    depth: 'deep',
+    fromCache: false,
+    cachedAt: null,
   },
   source: 'demo',
 }

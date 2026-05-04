@@ -30,7 +30,9 @@ export function calculateScore(
 ): ScoreResult {
   const analyzedRepoCount = repoSummary.analyzedRepoCount
   const readmeQualityScore =
-    repoSummary.analyzedReadmeCount > 0
+    repoSummary.readmeStrategy === 'none'
+      ? 5
+      : repoSummary.analyzedReadmeCount > 0
       ? Math.round((repoSummary.readmeAverageScore / 10) * 10)
       : getRatioScore(repoSummary.reposWithReadme, analyzedRepoCount, 10)
 

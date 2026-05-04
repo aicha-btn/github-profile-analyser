@@ -1,6 +1,6 @@
-# Portfolio Pulse
+# Github Analyzer
 
-Portfolio Pulse transforme un profil GitHub en diagnostic d'employabilité développeur.
+Github Analyzer transforme un profil GitHub en diagnostic d'employabilité développeur.
 
 ## Pitch
 
@@ -152,7 +152,7 @@ Cela garde une lecture claire tout en montrant absolument tous les répos du pro
 
 ## Analyse README
 
-En `V2`, Portfolio Pulse inspecte le contenu des README sur tous les répos détectés.
+En `V2`, Github Analyzer inspecte le contenu des README sur tous les répos détectés.
 
 Signaux recherchés :
 

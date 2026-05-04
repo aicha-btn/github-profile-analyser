@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import type { AnalysisMode, RecruiterGoal } from '../types/github'
+import type { AnalysisDepth, AnalysisMode, RecruiterGoal } from '../types/github'
 import type { RecruiterProfile } from '../utils/recruiterMode'
 
 interface SearchFormProps {
@@ -7,10 +7,12 @@ interface SearchFormProps {
   validationMessage: string | null
   isLoading: boolean
   analysisMode: AnalysisMode
+  analysisDepth: AnalysisDepth
   recruiterGoal: RecruiterGoal
   recruiterProfiles: RecruiterProfile[]
   onUsernameChange: (value: string) => void
   onAnalysisModeChange: (mode: AnalysisMode) => void
+  onAnalysisDepthChange: (depth: AnalysisDepth) => void
   onRecruiterGoalChange: (goal: RecruiterGoal) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
@@ -20,10 +22,12 @@ export function SearchForm({
   validationMessage,
   isLoading,
   analysisMode,
+  analysisDepth,
   recruiterGoal,
   recruiterProfiles,
   onUsernameChange,
   onAnalysisModeChange,
+  onAnalysisDepthChange,
   onRecruiterGoalChange,
   onSubmit,
 }: SearchFormProps) {
@@ -81,6 +85,22 @@ export function SearchForm({
       </div>
 
       <div className="search-form__select-group">
+        <label className="search-form__label" htmlFor="analysis-depth">
+          Niveau d’analyse
+        </label>
+        <select
+          id="analysis-depth"
+          className="search-form__select"
+          value={analysisDepth}
+          onChange={(event) => onAnalysisDepthChange(event.target.value as AnalysisDepth)}
+          disabled={isLoading || analysisMode === 'demo'}
+        >
+          <option value="quick">Analyse rapide</option>
+          <option value="deep">Analyse approfondie</option>
+        </select>
+      </div>
+
+      <div className="search-form__select-group">
         <label className="search-form__label" htmlFor="recruiter-goal">
           Objectif recruteur
         </label>
@@ -108,7 +128,9 @@ export function SearchForm({
         {validationMessage ??
           (analysisMode === 'demo'
             ? 'Le mode démo n’appelle pas GitHub. Il génère un résultat local pour tester l’interface.'
-            : 'Portfolio Pulse analyse le profil, tous les répos publics et tous les README détectés.')}
+            : analysisDepth === 'quick'
+              ? 'Analyse rapide : profil + répos publics, sans inspection README pour limiter les requêtes GitHub.'
+              : 'Analyse approfondie : profil + répos publics + README limités aux meilleurs projets pour éviter la surcharge API.')}
       </p>
     </form>
   )
