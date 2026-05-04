@@ -2,6 +2,10 @@
 
 Github Analyzer transforme un profil GitHub en diagnostic d'employabilité développeur.
 
+## Testez ici !
+
+🔗 https://github-profileanalyser.vercel.app/
+
 ## Pitch
 
 Cette application React TypeScript analyse un profil GitHub public, sélectionne les repositories les plus représentatifs et génère :
