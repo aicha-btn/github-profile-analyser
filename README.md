@@ -1,126 +1,127 @@
-# Github Analyzer
+# GitHub Profile Analyser
 
-Github Analyzer transforme un profil GitHub en diagnostic d'employabilité développeur.
+GitHub Profile Analyser turns a public GitHub profile into a developer employability diagnosis.
 
-## Testez ici !
+## Live Demo
 
-🔗 https://github-profileanalyser.vercel.app/
+https://github-profileanalyser.vercel.app/
 
 ## Pitch
 
-Cette application React TypeScript analyse un profil GitHub public, sélectionne les repositories les plus représentatifs et génère :
+This React and TypeScript application analyses a public GitHub profile, selects the most representative repositories, and generates:
 
-- un score global sur 100 ;
-- un résumé des signaux forts du profil ;
-- des points à améliorer ;
-- une checklist concrète pour rendre le portfolio plus convaincant.
+- an overall score out of 100;
+- a summary of the profile's strongest signals;
+- areas for improvement;
+- a concrete checklist to make the portfolio more convincing.
 
-## Objectif du projet
+## Project Goal
 
-Ce projet a été pensé comme un projet portfolio frontend pour démontrer :
+This project was designed as a frontend portfolio project to demonstrate:
 
-- la création d'une application React avec TypeScript et Vite ;
-- la consommation d'une API réelle ;
-- la gestion des états `loading`, `error` et `success` ;
-- la transformation de données API en logique métier exploitable ;
-- la création d'un dashboard clair et responsive ;
-- l'organisation propre d'un projet frontend.
+- building a React application with TypeScript and Vite;
+- consuming a real API;
+- handling `loading`, `error`, and `success` states;
+- turning API data into useful business logic;
+- building a clear, responsive dashboard;
+- organizing a frontend project cleanly.
 
-## Fonctionnalités actuelles
+## Current Features
 
 ### V0
 
-- initialisation du projet avec Vite React TypeScript ;
-- structure de dossiers dédiée aux composants, services, utilitaires et types ;
-- base CSS globale personnalisée ;
-- roadmap versionnée du projet.
+- Vite React TypeScript project setup;
+- dedicated folder structure for components, services, utilities, and types;
+- custom global CSS base;
+- versioned project roadmap.
 
 ### V1
 
-- recherche d'un pseudo GitHub public ;
-- validation simple du username ;
-- récupération du profil public GitHub ;
-- récupération des repositories publics ;
-- détection de README sur les répos publics ;
-- calcul d'un score sur 100 avec détail par catégorie ;
-- affichage des informations de profil ;
-- affichage des répos analysés ;
-- recommandations automatiques : points forts, points à améliorer, checklist actionnable ;
-- interface responsive de type dashboard.
+- public GitHub username search;
+- simple username validation;
+- public GitHub profile fetching;
+- public repository fetching;
+- README detection on public repositories;
+- score calculation out of 100 with category details;
+- profile information display;
+- analysed repository display;
+- automatic recommendations: strengths, improvements, and actionable checklist;
+- responsive dashboard interface.
 
 ### V1.1
 
-- état vide avant recherche avec exemples de usernames ;
-- mode démo local utile pour les screenshots et les présentations ;
-- messages d’erreur plus guidants ;
-- tri plus intelligent des répos analysés ;
-- badges de langages et signaux de stack ;
-- section de répos en défilement horizontal ;
-- préparation du déploiement Vercel.
+- empty state before search with example usernames;
+- local demo mode for screenshots and presentations;
+- clearer error messages;
+- smarter sorting of analysed repositories;
+- language badges and stack signals;
+- horizontally scrollable repository section;
+- Vercel deployment preparation.
 
 ### V2
 
-- analyse détaillée du contenu README sur tous les répos détectés ;
-- décodage du README depuis l’API GitHub ;
-- détection de sections clés : installation, stack, fonctionnalités, screenshots, démo, roadmap ;
-- score README par répo sur 10 ;
-- niveau affiché : `README basique`, `README correct` ou `README professionnel` ;
-- impact du README sur l’analyse globale.
+- detailed README content analysis across detected repositories;
+- README decoding from the GitHub API;
+- key section detection: installation, stack, features, screenshots, demo, and roadmap;
+- README score per repository out of 10;
+- displayed level: `basic README`, `solid README`, or `professional README`;
+- README impact on the overall analysis.
 
 ### V3
 
-- sélecteur d’objectif recruteur ;
-- modes disponibles :
-  - alternance frontend ;
-  - alternance fullstack ;
-  - stage développeur web ;
-  - junior React ;
-- scoring réorienté selon l’objectif sélectionné ;
-- recommandations adaptées à la cible ;
-- technos attendues mises en avant ;
-- diagnostic orienté recruteur avec adéquation estimée.
+- recruiter goal selector;
+- available modes:
+  - frontend apprenticeship;
+  - fullstack apprenticeship;
+  - web development internship;
+  - junior React;
+- scoring adjusted to the selected goal;
+- target-specific recommendations;
+- expected technologies highlighted;
+- recruiter-oriented diagnosis with an estimated match level.
 
-## Stack technique
+## Technical Stack
 
 - React
 - TypeScript
 - Vite
 - CSS
-- API GitHub publique
+- Public GitHub API
 
-## API utilisée
+## API Used
 
-Endpoints principaux :
+Main endpoints:
 
 - `GET https://api.github.com/users/{username}`
 - `GET https://api.github.com/users/{username}/repos?sort=updated&per_page=100`
 - `GET https://api.github.com/repos/{owner}/{repo}/readme`
 
-Note : l'application analyse désormais tous les répos publics du profil et inspecte chaque README détecté. Sur de très gros profils, cela peut donc atteindre plus vite la limite GitHub non authentifiée.
+Note: the application now analyses all public repositories on the profile and inspects each detected README. On very large profiles, this can reach the unauthenticated GitHub API limit more quickly.
 
-## Installation locale
+## Local Installation
 
 ```bash
-cd /Users/aicha/Documents/portfolio-pulse
+git clone https://github.com/aicha-btn/github-profile-analyser.git
+cd github-profile-analyser
 npm install
 npm run dev
 ```
 
-Puis ouvrir l'URL affichée dans le terminal, en général `http://localhost:5173`.
+Then open the URL displayed in the terminal, usually `http://localhost:5173`.
 
-## Mode démo local
+## Local Demo Mode
 
-Un mode démo local est disponible pour montrer l'interface même si l'API GitHub est limitée.
+A local demo mode is available to show the interface even when the GitHub API is limited.
 
-Exemple d'URL :
+Example URL:
 
 ```text
 http://localhost:5173/?demo=1
 ```
 
-Ce mode affiche une analyse locale fictive, uniquement pour la démonstration visuelle.
+This mode displays a local mock analysis for visual demonstration only.
 
-## Scripts utiles
+## Useful Scripts
 
 ```bash
 npm run dev
@@ -129,108 +130,108 @@ npm run preview
 npm run lint
 ```
 
-## Logique de scoring
+## Scoring Logic
 
-Le score global est calculé sur 100 points :
+The overall score is calculated out of 100 points:
 
-- Profil GitHub : 20 points
-- Qualité des repos : 30 points
-- Lisibilité portfolio : 25 points
-- Activité récente : 15 points
-- Diversité technique : 10 points
+- GitHub profile: 20 points
+- Repository quality: 30 points
+- Portfolio readability: 25 points
+- Recent activity: 15 points
+- Technical diversity: 10 points
 
-Le résultat reste un diagnostic pédagogique : il aide à prioriser les améliorations visibles par un recruteur.
+The result remains an educational diagnosis: it helps prioritize improvements that are visible to a recruiter.
 
-## Tri des répos analysés
+## Analysed Repository Sorting
 
-L'application analyse tous les répos publics du profil dans le dashboard, puis les trie pour faire remonter en premier :
+The application analyses all public repositories in the dashboard, then sorts them to surface first:
 
-- les projets non archivés ;
-- les projets avec description claire ;
-- les projets avec README ;
-- les projets avec démo ;
-- les projets récemment mis à jour ;
-- les projets dont le nom et la stack sont lisibles.
+- non-archived projects;
+- projects with a clear description;
+- projects with a README;
+- projects with a demo;
+- recently updated projects;
+- projects with readable names and stacks.
 
-Cela garde une lecture claire tout en montrant absolument tous les répos du profil.
+This keeps the dashboard readable while still showing every public repository on the profile.
 
-## Analyse README
+## README Analysis
 
-En `V2`, Github Analyzer inspecte le contenu des README sur tous les répos détectés.
+In `V2`, GitHub Profile Analyser inspects README content across all detected repositories.
 
-Signaux recherchés :
+Signals checked:
 
-- section d’installation ;
-- stack ou technologies ;
-- fonctionnalités ;
-- screenshots ou images ;
-- lien de démo ;
-- améliorations futures / roadmap ;
-- structure globale du document.
+- installation section;
+- stack or technologies;
+- features;
+- screenshots or images;
+- demo link;
+- future improvements or roadmap;
+- overall document structure.
 
-Chaque README analysé reçoit un score sur `10` puis un niveau :
+Each analysed README receives a score out of `10`, then a level:
 
-- `README basique`
-- `README correct`
-- `README professionnel`
+- `basic README`
+- `solid README`
+- `professional README`
 
-## Mode recruteur
+## Recruiter Mode
 
-En `V3`, l’application peut relire le même profil GitHub selon un objectif professionnel précis.
+In `V3`, the application can review the same GitHub profile through a specific career goal.
 
-Objectifs disponibles :
+Available goals:
 
-- `Alternance frontend`
-- `Alternance fullstack`
-- `Stage développeur web`
+- `Frontend apprenticeship`
+- `Fullstack apprenticeship`
+- `Web development internship`
 - `Junior React`
 
-Ce mode agit sur trois choses :
+This mode affects three things:
 
-- le scoring global ;
-- les recommandations ;
-- la mise en avant des technos attendues par le recruteur.
+- the overall scoring;
+- the recommendations;
+- the expected technologies highlighted for the recruiter.
 
-Le dashboard affiche aussi :
+The dashboard also displays:
 
-- une adéquation estimée ;
-- les signaux déjà visibles ;
-- les technos ou signaux qu’il manque encore pour mieux coller au poste visé.
+- an estimated match;
+- the signals already visible;
+- missing technologies or signals that would better match the target role.
 
 ## Screenshots
 
-### Etat vide
+### Empty State
 
-![Etat vide](./docs/screenshots/empty-state.png)
+![Empty state](./docs/screenshots/empty-state.png)
 
-### Dashboard desktop
+### Desktop Dashboard
 
-![Dashboard desktop](./docs/screenshots/dashboard-analysis.png)
+![Desktop dashboard](./docs/screenshots/dashboard-analysis.png)
 
-### Dashboard mobile
+### Mobile Dashboard
 
-![Dashboard mobile](./docs/screenshots/dashboard-mobile.png)
+![Mobile dashboard](./docs/screenshots/dashboard-mobile.png)
 
-## Déploiement Vercel
+## Vercel Deployment
 
-Le projet est préparé pour un déploiement simple sur Vercel avec [vercel.json](./vercel.json).
+The project is prepared for a simple Vercel deployment with [vercel.json](./vercel.json).
 
-Etapes :
+Steps:
 
-1. importer le dépôt GitHub dans Vercel ;
-2. laisser Vercel détecter le projet Vite ;
-3. vérifier que la commande de build est `npm run build` ;
-4. vérifier que le dossier de sortie est `dist` ;
-5. lancer le déploiement.
+1. import the GitHub repository into Vercel;
+2. let Vercel detect the Vite project;
+3. check that the build command is `npm run build`;
+4. check that the output directory is `dist`;
+5. launch the deployment.
 
-## Prochaines améliorations prévues
+## Planned Improvements
 
-- `V4` : historique local des analyses ;
-- `V5` : génération assistée de textes portfolio.
+- `V4`: local analysis history;
+- `V5`: assisted portfolio text generation.
 
-## Ce que le projet démontre techniquement
+## What the Project Demonstrates Technically
 
-- séparation claire entre UI, services API, types et utilitaires métier ;
-- gestion de données externes en frontend ;
-- création d'heuristiques de scoring ;
-- restitution visuelle d'un diagnostic produit.
+- clear separation between UI, API services, types, and business utilities;
+- frontend management of external data;
+- scoring heuristic design;
+- visual presentation of a product diagnosis.
