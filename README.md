@@ -25,19 +25,27 @@ The score is a deterministic heuristic for prioritising visible portfolio improv
 
 ## Screenshots
 
+All dashboard screenshots use the built-in fictional demo dataset.
+
+### Dashboard analysis
+
+![GitHub Profile Analyzer dashboard with heuristic score and recruiter-focused analysis](docs/screenshots/dashboard-analysis.png)
+
+*Dashboard analysis with the heuristic score, category breakdown and profile insights.*
+
 ### Empty state
 
-![GitHub Profile Analyser empty state](./docs/screenshots/empty-state.png)
+![GitHub Profile Analyzer initial screen with username input and analysis modes](docs/screenshots/empty-state.png)
 
-### Desktop dashboard
-
-![GitHub Profile Analyser desktop dashboard](./docs/screenshots/dashboard-analysis.png)
+*Initial analysis flow with public GitHub username input and quick/deep modes.*
 
 ### Mobile dashboard
 
-![GitHub Profile Analyser mobile dashboard](./docs/screenshots/dashboard-mobile.png)
+<p align="center">
+  <img src="docs/screenshots/dashboard-mobile.png" width="320" alt="GitHub Profile Analyzer dashboard on mobile" />
+</p>
 
-These captures predate the latest API resilience and analysis-mode refinements. Updated public screenshots are planned as a separate documentation step.
+<p align="center"><em>Responsive dashboard on a mobile viewport.</em></p>
 
 ## Architecture
 
