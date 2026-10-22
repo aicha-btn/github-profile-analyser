@@ -75,6 +75,7 @@ export interface RepoAnalysisSummary {
   analyzedRepos: AnalyzedRepo[]
   analyzedRepoCount: number
   totalRepoCount: number
+  paginationTruncated: boolean
   readmeStrategy: 'none' | 'top-ranked'
   readmeInspectedRepoCount: number
   readmeInspectionLimit: number

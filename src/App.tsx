@@ -71,10 +71,6 @@ function toErrorMessage(error: unknown): string {
     return error.message
   }
 
-  if (error instanceof Error) {
-    return error.message
-  }
-
   return 'Une erreur inattendue est survenue pendant l’analyse.'
 }
 
@@ -118,10 +114,16 @@ async function buildPortfolioAnalysis(
     return applyRecruiterGoalToAnalysis(cachedAnalysis, recruiterGoal)
   }
 
-  const [user, repos] = await Promise.all([getGithubUser(username), getGithubRepos(username)])
+  const user = await getGithubUser(username)
+  const { repos, paginationTruncated } = await getGithubRepos(username, user.public_repos)
+  const repoAnalysisOptions = {
+    totalRepoCount: user.public_repos,
+    paginationTruncated,
+  }
   const repoSummary =
     analysisDepth === 'quick'
       ? analyzeRepos(createReposWithoutReadmeInspection(repos), {
+          ...repoAnalysisOptions,
           readmeStrategy: 'none',
           readmeInspectedRepoCount: 0,
           readmeInspectionLimit: 0,
@@ -132,6 +134,7 @@ async function buildPortfolioAnalysis(
           const reposWithReadme = await attachReadmeAvailability(repos, readmeTargetIds)
 
           return analyzeRepos(reposWithReadme, {
+            ...repoAnalysisOptions,
             readmeStrategy: 'top-ranked',
             readmeInspectedRepoCount: readmeTargets.length,
             readmeInspectionLimit: DEFAULT_DEEP_README_LIMIT,
@@ -180,7 +183,9 @@ function createStats(analysis: PortfolioAnalysis): StatItem[] {
     {
       label: 'Répos analysés',
       value: String(repoSummary.analyzedRepoCount),
-      hint: 'Tous les répos publics du profil sont pris en compte dans le diagnostic.',
+      hint: repoSummary.paginationTruncated
+        ? `Analyse partielle plafonnée à ${repoSummary.analyzedRepoCount} répos sur ${repoSummary.totalRepoCount}.`
+        : 'Tous les répos publics du profil sont pris en compte dans le diagnostic.',
     },
     {
       label: 'README inspectés',
@@ -593,9 +598,12 @@ function App() {
                 <span className="eyebrow-chip">Tous les répos</span>
                 <h2>Répos analysés</h2>
                 <p>
-                  Github Analyzer analyse les {analysis.repoSummary.totalRepoCount} répos publics
-                  du profil, puis les trie pour faire remonter en premier les projets les plus
-                  convaincants, les plus récents ou les plus complets.
+                  Github Analyzer analyse{' '}
+                  {analysis.repoSummary.paginationTruncated
+                    ? `${analysis.repoSummary.analyzedRepoCount} des ${analysis.repoSummary.totalRepoCount}`
+                    : `les ${analysis.repoSummary.totalRepoCount}`}{' '}
+                  répos publics du profil, puis les trie pour faire remonter en premier les projets
+                  les plus convaincants, les plus récents ou les plus complets.
                 </p>
                 {analysis.repoSummary.readmeStrategy === 'none' ? (
                   <p>

@@ -1,122 +1,246 @@
+import { ZodError } from 'zod'
 import type { GithubRepo, GithubRepoWithReadme, GithubUser } from '../types/github'
+import {
+  githubReadmeSchema,
+  parseGithubRepos,
+  parseGithubUser,
+} from '../utils/githubValidation'
 
 const GITHUB_API_BASE = 'https://api.github.com'
-const README_FETCH_CONCURRENCY = 6
+const GITHUB_API_VERSION = '2022-11-28'
+const GITHUB_REQUEST_TIMEOUT_MS = 12_000
+const REPO_PAGE_SIZE = 100
+const MAX_REPO_PAGES = 5
+const README_FETCH_CONCURRENCY = 5
+const README_CONTENT_MAX_BYTES = 100_000
 export const DEFAULT_DEEP_README_LIMIT = 5
 
-export class GithubApiError extends Error {
-  status: number
+export type GithubApiErrorCode =
+  | 'USER_NOT_FOUND'
+  | 'RESOURCE_NOT_FOUND'
+  | 'RATE_LIMITED'
+  | 'TIMEOUT'
+  | 'GITHUB_UNAVAILABLE'
+  | 'INVALID_REMOTE_DATA'
+  | 'NETWORK_ERROR'
 
-  constructor(message: string, status: number) {
-    super(message)
+export interface GithubRequestOptions {
+  fetchImpl?: typeof fetch
+  timeoutMs?: number
+}
+
+interface GithubErrorDetails {
+  retryAfterSeconds: number | null
+  rateLimitRemaining: number | null
+  rateLimitResetAt: string | null
+}
+
+export interface GithubReposResult {
+  repos: GithubRepo[]
+  paginationTruncated: boolean
+}
+
+export class GithubApiError extends Error {
+  readonly code: GithubApiErrorCode
+  readonly status: number
+  readonly details: GithubErrorDetails
+
+  constructor(
+    code: GithubApiErrorCode,
+    status: number,
+    details: GithubErrorDetails = {
+      retryAfterSeconds: null,
+      rateLimitRemaining: null,
+      rateLimitResetAt: null,
+    },
+  ) {
+    super(getPublicErrorMessage(code, details.rateLimitResetAt))
     this.name = 'GithubApiError'
+    this.code = code
     this.status = status
+    this.details = details
   }
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
+function getPublicErrorMessage(code: GithubApiErrorCode, resetAt: string | null): string {
+  switch (code) {
+    case 'USER_NOT_FOUND':
+      return 'Ce profil GitHub est introuvable.'
+    case 'RESOURCE_NOT_FOUND':
+      return 'La ressource GitHub demandée est introuvable.'
+    case 'RATE_LIMITED':
+      return resetAt
+        ? `La limite de requêtes GitHub est atteinte. Réessaie après ${new Intl.DateTimeFormat(
+            'fr-FR',
+            { timeStyle: 'short' },
+          ).format(new Date(resetAt))}.`
+        : 'La limite de requêtes GitHub est atteinte. Réessaie un peu plus tard.'
+    case 'TIMEOUT':
+      return 'GitHub met trop de temps à répondre. Réessaie dans un moment.'
+    case 'GITHUB_UNAVAILABLE':
+      return 'GitHub est temporairement indisponible. Réessaie un peu plus tard.'
+    case 'INVALID_REMOTE_DATA':
+      return 'GitHub a renvoyé des données inattendues. Réessaie un peu plus tard.'
+    case 'NETWORK_ERROR':
+      return 'Impossible de contacter GitHub. Vérifie ta connexion puis réessaie.'
+  }
+}
+
+function parseHeaderNumber(value: string | null): number | null {
+  if (value === null || value.trim() === '') {
+    return null
+  }
+
+  const parsedValue = Number(value)
+  return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : null
+}
+
+function getRateLimitDetails(headers: Headers): GithubErrorDetails {
+  const retryAfterValue = headers.get('Retry-After')
+  const retryAfterSeconds = parseHeaderNumber(retryAfterValue)
+  const resetSeconds = parseHeaderNumber(headers.get('X-RateLimit-Reset'))
+  let resetAt: string | null = null
+
+  if (retryAfterSeconds !== null) {
+    resetAt = new Date(Date.now() + retryAfterSeconds * 1000).toISOString()
+  } else if (retryAfterValue) {
+    const retryDate = new Date(retryAfterValue)
+    resetAt = Number.isFinite(retryDate.getTime()) ? retryDate.toISOString() : null
+  } else if (resetSeconds !== null) {
+    resetAt = new Date(resetSeconds * 1000).toISOString()
+  }
+
+  return {
+    retryAfterSeconds,
+    rateLimitRemaining: parseHeaderNumber(headers.get('X-RateLimit-Remaining')),
+    rateLimitResetAt: resetAt,
+  }
+}
+
+function getGithubApiUrl(path: string): string {
+  if (!path.startsWith('/')) {
+    throw new Error('GitHub API paths must be relative to the configured API host.')
+  }
+
+  return `${GITHUB_API_BASE}${path}`
+}
+
+async function fetchGithubJson<T>(
+  path: string,
+  parsePayload: (payload: unknown) => T,
+  notFoundCode: Extract<GithubApiErrorCode, 'USER_NOT_FOUND' | 'RESOURCE_NOT_FOUND'>,
+  options: GithubRequestOptions = {},
+): Promise<T> {
+  const controller = new AbortController()
+  const timeout = globalThis.setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? GITHUB_REQUEST_TIMEOUT_MS,
+  )
   let response: Response
 
   try {
-    response = await fetch(url, {
+    response = await (options.fetchImpl ?? fetch)(getGithubApiUrl(path), {
       headers: {
         Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': GITHUB_API_VERSION,
       },
+      signal: controller.signal,
     })
-  } catch {
-    throw new GithubApiError(
-      "Impossible de contacter GitHub pour le moment. Vérifie ta connexion internet puis réessaie.",
-      0,
-    )
+  } catch (error) {
+    if (controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+      throw new GithubApiError('TIMEOUT', 0)
+    }
+
+    throw new GithubApiError('NETWORK_ERROR', 0)
+  } finally {
+    globalThis.clearTimeout(timeout)
   }
 
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as {
-      message?: string
-    } | null
+    const rateLimitDetails = getRateLimitDetails(response.headers)
 
     if (response.status === 404) {
-      throw new GithubApiError('Ce profil GitHub est introuvable.', response.status)
+      throw new GithubApiError(notFoundCode, response.status)
     }
 
-    if (response.status === 403) {
-      throw new GithubApiError(
-        "La limite de requêtes GitHub a été atteinte. Réessaie dans environ une heure.",
-        response.status,
-      )
-    }
-
-    if (response.status === 429) {
-      throw new GithubApiError(
-        'Trop de requêtes GitHub en peu de temps. Attends un moment avant de relancer une analyse.',
-        response.status,
-      )
+    if (response.status === 403 || response.status === 429) {
+      throw new GithubApiError('RATE_LIMITED', response.status, rateLimitDetails)
     }
 
     if (response.status >= 500) {
-      throw new GithubApiError(
-        'GitHub rencontre un problème temporaire. Réessaie un peu plus tard.',
-        response.status,
-      )
+      throw new GithubApiError('GITHUB_UNAVAILABLE', response.status)
     }
 
-    throw new GithubApiError(
-      payload?.message ?? 'Une erreur GitHub inattendue est survenue.',
-      response.status,
-    )
+    throw new GithubApiError('GITHUB_UNAVAILABLE', response.status)
   }
 
-  return (await response.json()) as T
+  let payload: unknown
+
+  try {
+    payload = await response.json()
+    return parsePayload(payload)
+  } catch (error) {
+    if (error instanceof GithubApiError) {
+      throw error
+    }
+
+    if (error instanceof ZodError || error instanceof SyntaxError) {
+      throw new GithubApiError('INVALID_REMOTE_DATA', response.status)
+    }
+
+    throw new GithubApiError('INVALID_REMOTE_DATA', response.status)
+  }
 }
 
-function decodeBase64ToUtf8(base64Content: string): string {
-  const cleanedContent = base64Content.replace(/\n/g, '')
-  const binaryString = atob(cleanedContent)
-  const bytes = Uint8Array.from(binaryString, (character) => character.charCodeAt(0))
+function decodeBoundedBase64ToUtf8(base64Content: string): string {
+  const cleanedContent = base64Content.replace(/\s/g, '')
+  const maximumEncodedLength = Math.ceil(README_CONTENT_MAX_BYTES / 3) * 4
+  const boundedContent = cleanedContent.slice(0, maximumEncodedLength)
+  const completeQuartets = boundedContent.slice(0, boundedContent.length - (boundedContent.length % 4))
 
-  return new TextDecoder().decode(bytes)
+  try {
+    const binaryString = atob(completeQuartets)
+    const bytes = Uint8Array.from(binaryString, (character) => character.charCodeAt(0))
+    return new TextDecoder().decode(bytes).slice(0, README_CONTENT_MAX_BYTES)
+  } catch {
+    throw new GithubApiError('INVALID_REMOTE_DATA', 200)
+  }
 }
 
 async function fetchReadmeData(
   owner: string,
   repo: string,
+  options: GithubRequestOptions = {},
 ): Promise<{ hasReadme: boolean; readmeContent: string | null }> {
-  const response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/readme`, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-    },
-  })
+  try {
+    const payload = await fetchGithubJson(
+      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/readme`,
+      (value) => githubReadmeSchema.parse(value),
+      'RESOURCE_NOT_FOUND',
+      options,
+    )
 
-  if (response.ok) {
-    const payload = (await response.json()) as {
-      content?: string
-      encoding?: string
-    }
-
-    if (payload.content && payload.encoding === 'base64') {
+    if (payload.encoding !== 'base64' || !payload.content) {
       return {
         hasReadme: true,
-        readmeContent: decodeBase64ToUtf8(payload.content),
+        readmeContent: null,
       }
     }
 
     return {
       hasReadme: true,
-      readmeContent: null,
+      readmeContent: decodeBoundedBase64ToUtf8(payload.content),
     }
-  }
-
-  if (response.status === 404 || response.status === 403 || response.status === 429) {
-    return {
-      hasReadme: false,
-      readmeContent: null,
+  } catch (error) {
+    if (error instanceof GithubApiError && error.code === 'RESOURCE_NOT_FOUND') {
+      return {
+        hasReadme: false,
+        readmeContent: null,
+      }
     }
-  }
 
-  throw new GithubApiError(
-    `Impossible de récupérer le README du répo ${owner}/${repo}.`,
-    response.status,
-  )
+    throw error
+  }
 }
 
 async function mapWithConcurrency<T, R>(
@@ -142,34 +266,60 @@ async function mapWithConcurrency<T, R>(
   return results
 }
 
-export function getGithubUser(username: string): Promise<GithubUser> {
-  return fetchJson<GithubUser>(`${GITHUB_API_BASE}/users/${username}`)
+export function getGithubUser(
+  username: string,
+  options: GithubRequestOptions = {},
+): Promise<GithubUser> {
+  return fetchGithubJson(
+    `/users/${encodeURIComponent(username)}`,
+    parseGithubUser,
+    'USER_NOT_FOUND',
+    options,
+  )
 }
 
-export async function getGithubRepos(username: string): Promise<GithubRepo[]> {
+export async function getGithubRepos(
+  username: string,
+  expectedPublicRepoCount: number,
+  options: GithubRequestOptions = {},
+): Promise<GithubReposResult> {
   const repos: GithubRepo[] = []
-  let page = 1
 
-  while (true) {
-    const pageRepos = await fetchJson<GithubRepo[]>(
-      `${GITHUB_API_BASE}/users/${username}/repos?sort=updated&per_page=100&page=${page}`,
+  if (expectedPublicRepoCount === 0) {
+    return {
+      repos,
+      paginationTruncated: false,
+    }
+  }
+
+  for (let page = 1; page <= MAX_REPO_PAGES; page += 1) {
+    const pageRepos = await fetchGithubJson(
+      `/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=${REPO_PAGE_SIZE}&page=${page}`,
+      parseGithubRepos,
+      'USER_NOT_FOUND',
+      options,
     )
 
     repos.push(...pageRepos)
 
-    if (pageRepos.length < 100) {
-      break
+    if (pageRepos.length < REPO_PAGE_SIZE || repos.length >= expectedPublicRepoCount) {
+      return {
+        repos,
+        paginationTruncated: false,
+      }
     }
-
-    page += 1
   }
 
-  return repos
+  return {
+    repos,
+    paginationTruncated: repos.length < expectedPublicRepoCount,
+  }
 }
 
 export async function attachReadmeAvailability(
   repos: GithubRepo[],
   readmeTargetRepoIds: Set<number>,
+  options: GithubRequestOptions = {},
 ): Promise<GithubRepoWithReadme[]> {
   if (readmeTargetRepoIds.size === 0) {
     return createReposWithoutReadmeInspection(repos)
@@ -181,7 +331,7 @@ export async function attachReadmeAvailability(
     Math.min(README_FETCH_CONCURRENCY, Math.max(1, readmeTargetRepoIds.size)),
     async (repo) => ({
       repoId: repo.id,
-      ...(await fetchReadmeData(repo.owner.login, repo.name)),
+      ...(await fetchReadmeData(repo.owner.login, repo.name, options)),
     }),
   )
 

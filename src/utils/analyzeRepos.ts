@@ -40,6 +40,8 @@ interface AnalyzeReposOptions {
   readmeStrategy?: 'none' | 'top-ranked'
   readmeInspectedRepoCount?: number
   readmeInspectionLimit?: number
+  totalRepoCount?: number
+  paginationTruncated?: boolean
 }
 
 function getSelectionLabel(
@@ -69,9 +71,14 @@ function getSelectionLabel(
 export function isRecentlyUpdated(updatedAt: string): boolean {
   const updatedAtTime = new Date(updatedAt).getTime()
   const now = Date.now()
+
+  if (!Number.isFinite(updatedAtTime) || updatedAtTime > now) {
+    return false
+  }
+
   const diffInDays = (now - updatedAtTime) / (1000 * 60 * 60 * 24)
 
-  return diffInDays <= RECENT_ACTIVITY_DAYS
+  return diffInDays >= 0 && diffInDays <= RECENT_ACTIVITY_DAYS
 }
 
 export function hasClearDescription(description: string | null): boolean {
@@ -165,6 +172,11 @@ function getFeaturePriority(repo: GithubRepo): number {
   return score
 }
 
+function getSortableUpdatedAt(updatedAt: string): number {
+  const timestamp = new Date(updatedAt).getTime()
+  return Number.isFinite(timestamp) && timestamp <= Date.now() ? timestamp : 0
+}
+
 export function sortReposByPortfolioValue<T extends GithubRepo>(repos: T[]): T[] {
   return [...repos]
     .sort((firstRepo, secondRepo) => {
@@ -174,7 +186,7 @@ export function sortReposByPortfolioValue<T extends GithubRepo>(repos: T[]): T[]
         return priorityDiff
       }
 
-      return new Date(secondRepo.updated_at).getTime() - new Date(firstRepo.updated_at).getTime()
+      return getSortableUpdatedAt(secondRepo.updated_at) - getSortableUpdatedAt(firstRepo.updated_at)
     })
 }
 
@@ -190,6 +202,8 @@ export function analyzeRepos(
     readmeStrategy = 'top-ranked',
     readmeInspectedRepoCount = repos.length,
     readmeInspectionLimit = repos.length,
+    totalRepoCount = repos.length,
+    paginationTruncated = false,
   } = options
   const sortedRepos = sortReposByPortfolioValue(repos)
   const enhancedAnalyzedRepos: EnhancedAnalyzedRepo[] = sortedRepos.map((repo) => {
@@ -267,7 +281,8 @@ export function analyzeRepos(
       return publicRepo
     }),
     analyzedRepoCount: enhancedAnalyzedRepos.length,
-    totalRepoCount: enhancedAnalyzedRepos.length,
+    totalRepoCount,
+    paginationTruncated,
     readmeStrategy,
     readmeInspectedRepoCount,
     readmeInspectionLimit,
