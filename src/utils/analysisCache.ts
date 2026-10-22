@@ -29,11 +29,12 @@ function getStorageKey(username: string, depth: AnalysisDepth): string {
 export function readCachedAnalysis(
   username: string,
   depth: AnalysisDepth,
+  storage: Storage = window.localStorage,
 ): PortfolioAnalysis | null {
   const storageKey = getStorageKey(username, depth)
 
   try {
-    const rawValue = window.localStorage.getItem(storageKey)
+    const rawValue = storage.getItem(storageKey)
 
     if (!rawValue) {
       return null
@@ -54,7 +55,7 @@ export function readCachedAnalysis(
       cachedAtTime > Date.now() ||
       Date.now() - cachedAtTime > ANALYSIS_CACHE_TTL_MS
     ) {
-      window.localStorage.removeItem(storageKey)
+      storage.removeItem(storageKey)
       return null
     }
 
@@ -69,7 +70,7 @@ export function readCachedAnalysis(
     }
   } catch {
     try {
-      window.localStorage.removeItem(storageKey)
+      storage.removeItem(storageKey)
     } catch {
       // Storage can be unavailable in restrictive browser contexts.
     }
@@ -82,6 +83,7 @@ export function writeCachedAnalysis(
   username: string,
   depth: AnalysisDepth,
   analysis: PortfolioAnalysis,
+  storage: Storage = window.localStorage,
 ): PortfolioAnalysis {
   const cachedAt = new Date().toISOString()
   const persistedAnalysis: PortfolioAnalysis = {
@@ -102,7 +104,7 @@ export function writeCachedAnalysis(
       analysis: persistedAnalysis,
     }
 
-    window.localStorage.setItem(getStorageKey(username, depth), JSON.stringify(payload))
+    storage.setItem(getStorageKey(username, depth), JSON.stringify(payload))
   } catch {
     return persistedAnalysis
   }
