@@ -1,237 +1,146 @@
 # GitHub Profile Analyser
 
-GitHub Profile Analyser turns a public GitHub profile into a developer employability diagnosis.
+GitHub Profile Analyser turns a public GitHub profile into a recruiter-oriented portfolio review with a heuristic score and actionable recommendations.
 
-## Live Demo
+[![CI](https://github.com/aicha-btn/github-profile-analyser/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aicha-btn/github-profile-analyser/actions/workflows/ci.yml)
 
-https://github-profileanalyser.vercel.app/
+**Live application:** [https://github-profileanalyser.vercel.app](https://github-profileanalyser.vercel.app)
 
-## Pitch
+## Product overview
 
-This React and TypeScript application analyses a public GitHub profile, selects the most representative repositories, and generates:
+The application analyses public profile and repository metadata directly in the browser. It highlights portfolio signals that are easy for a recruiter to scan, calculates a score out of 100, and suggests concrete improvements for the profile and its repositories.
 
-- an overall score out of 100;
-- a summary of the profile's strongest signals;
-- areas for improvement;
-- a concrete checklist to make the portfolio more convincing.
+The score is a deterministic heuristic for prioritising visible portfolio improvements. It is not a scientific assessment, an official GitHub ranking, or a measure of employability.
 
-## Project Goal
+## Key features
 
-This project was designed as a frontend portfolio project to demonstrate:
+- Analyse a public GitHub username, profile, and paginated public repositories.
+- Review repository descriptions, names, languages, demo links, stars, forks, archive/fork status, and update dates.
+- Generate strengths, areas for improvement, and an actionable checklist.
+- Switch between four recruiter perspectives: frontend apprenticeship, fullstack apprenticeship, web development internship, and junior React.
+- Use **quick analysis** for profile and repository metadata with no README requests.
+- Use **deep analysis** to inspect README content for up to five selected repositories.
+- Cache quick and deep results separately in the browser for six hours.
+- Explore the interface without GitHub requests through the built-in local demo mode.
 
-- building a React application with TypeScript and Vite;
-- consuming a real API;
-- handling `loading`, `error`, and `success` states;
-- turning API data into useful business logic;
-- building a clear, responsive dashboard;
-- organizing a frontend project cleanly.
+## Screenshots
 
-## Current Features
+### Empty state
 
-### V0
+![GitHub Profile Analyser empty state](./docs/screenshots/empty-state.png)
 
-- Vite React TypeScript project setup;
-- dedicated folder structure for components, services, utilities, and types;
-- custom global CSS base;
-- versioned project roadmap.
+### Desktop dashboard
 
-### V1
+![GitHub Profile Analyser desktop dashboard](./docs/screenshots/dashboard-analysis.png)
 
-- public GitHub username search;
-- simple username validation;
-- public GitHub profile fetching;
-- public repository fetching;
-- README detection on public repositories;
-- score calculation out of 100 with category details;
-- profile information display;
-- analysed repository display;
-- automatic recommendations: strengths, improvements, and actionable checklist;
-- responsive dashboard interface.
+### Mobile dashboard
 
-### V1.1
+![GitHub Profile Analyser mobile dashboard](./docs/screenshots/dashboard-mobile.png)
 
-- empty state before search with example usernames;
-- local demo mode for screenshots and presentations;
-- clearer error messages;
-- smarter sorting of analysed repositories;
-- language badges and stack signals;
-- horizontally scrollable repository section;
-- Vercel deployment preparation.
+These captures predate the latest API resilience and analysis-mode refinements. Updated public screenshots are planned as a separate documentation step.
 
-### V2
+## Architecture
 
-- detailed README content analysis across detected repositories;
-- README decoding from the GitHub API;
-- key section detection: installation, stack, features, screenshots, demo, and roadmap;
-- README score per repository out of 10;
-- displayed level: `basic README`, `solid README`, or `professional README`;
-- README impact on the overall analysis.
+```mermaid
+flowchart LR
+    Browser[Browser] --> SPA[React and Vite SPA]
+    SPA --> API[Public GitHub REST API]
+    API --> Validation[Zod runtime validation]
+    Validation --> Analysis[Local analysis and heuristic scoring]
+    Analysis --> Dashboard[Dashboard and recommendations]
+    Analysis <--> Cache[localStorage cache - 6 hours]
+```
 
-### V3
+There is no application backend, database, GitHub token, or server-side secret. GitHub requests, validation, analysis, scoring, and caching are handled by the browser.
 
-- recruiter goal selector;
-- available modes:
-  - frontend apprenticeship;
-  - fullstack apprenticeship;
-  - web development internship;
-  - junior React;
-- scoring adjusted to the selected goal;
-- target-specific recommendations;
-- expected technologies highlighted;
-- recruiter-oriented diagnosis with an estimated match level.
+## Scoring model
 
-## Technical Stack
+The total score is capped at 100 points:
 
-- React
-- TypeScript
-- Vite
-- CSS
-- Public GitHub API
+- **Profile completeness:** 20
+- **Repository quality:** 30
+- **Portfolio readability:** 25
+- **Activity:** 15
+- **Technical diversity:** 10
 
-## API Used
+The model uses simple, explainable signals from the public profile and repository metadata. Given the same input data, date, and recruiter perspective, it produces the same result. The score is a portfolio-review aid, not an employability metric.
 
-Main endpoints:
+## Tech stack
 
-- `GET https://api.github.com/users/{username}`
-- `GET https://api.github.com/users/{username}/repos?sort=updated&per_page=100`
-- `GET https://api.github.com/repos/{owner}/{repo}/readme`
+- **Frontend:** React 19.2.5, TypeScript 6.0.3, Vite 8.1.6, CSS
+- **Data and validation:** browser Fetch API, Zod 4.6.7, localStorage
+- **Quality:** Vitest 5.0.5, ESLint, TypeScript checks, GitHub Actions
+- **Deployment:** Vercel
 
-Note: the application now analyses all public repositories on the profile and inspects each detected README. On very large profiles, this can reach the unauthenticated GitHub API limit more quickly.
+## Quality and CI
 
-## Local Installation
+The test suite contains **52 automated tests across 4 test files**. It covers Zod validation, mocked GitHub API behaviour, rate-limit metadata, timeouts, README responses, pagination limits, cache validation, scoring invariants, date handling, and quick/deep analysis behaviour.
+
+All GitHub API calls are mocked during tests: the suite makes **zero real GitHub requests** and requires no token or secret.
+
+The GitHub Actions workflow runs on Node.js 22.x and executes:
+
+```text
+npm ci
+npm test
+npm run lint
+npx tsc --noEmit
+npm run build
+npm audit --audit-level=critical
+```
+
+## GitHub API and resilience
+
+The SPA uses the unauthenticated public GitHub REST API. The public GitHub rate limit therefore applies.
+
+- Requests have a 12-second timeout backed by `AbortController`.
+- Repository pagination uses 100 items per page with a hard cap of 5 pages, or 500 repositories.
+- Quick analysis makes no README request.
+- Deep analysis selects and inspects at most 5 repositories.
+- README content is capped at 100,000 bytes before analysis.
+- HTTP 403 and 429 responses are treated as rate-limit errors rather than missing resources.
+- Runtime schemas reject incompatible GitHub responses before analysis.
+- A six-hour browser cache reduces repeated requests without claiming to eliminate rate limits.
+
+## Getting started
+
+Node.js 22.12 or later is recommended. npm is the supported package manager.
 
 ```bash
 git clone https://github.com/aicha-btn/github-profile-analyser.git
 cd github-profile-analyser
-npm install
+npm ci
 npm run dev
 ```
 
-Then open the URL displayed in the terminal, usually `http://localhost:5173`.
+No environment variable, GitHub token, or `.env` file is required.
 
-## Local Demo Mode
-
-A local demo mode is available to show the interface even when the GitHub API is limited.
-
-Example URL:
-
-```text
-http://localhost:5173/?demo=1
-```
-
-This mode displays a local mock analysis for visual demonstration only.
-
-## Useful Scripts
+Run the local quality checks with:
 
 ```bash
-npm run dev
-npm run build
-npm run preview
+npm test
 npm run lint
+npx tsc --noEmit
+npm run build
 ```
 
-## Scoring Logic
+## Limitations
 
-The overall score is calculated out of 100 points:
+- Requests are unauthenticated and subject to GitHub's public API quota.
+- An analysis includes at most 500 public repositories; reaching the cap is reported as a partial result.
+- Deep analysis inspects README content for at most five selected repositories.
+- Activity signals use available repository metadata, including `updated_at`; the contribution graph is not retrieved.
+- Scoring is heuristic and recruiter-oriented, not an objective quality or employability measure.
+- Cached results remain local to the current browser; there is no authentication, remote history, database, or cross-device storage.
 
-- GitHub profile: 20 points
-- Repository quality: 30 points
-- Portfolio readability: 25 points
-- Recent activity: 15 points
-- Technical diversity: 10 points
+## Privacy and security
 
-The result remains an educational diagnosis: it helps prioritize improvements that are visible to a recruiter.
+The application does not request or expose a GitHub token. Public GitHub data is fetched and analysed in the browser, with no proprietary application backend. Cached analyses stay in localStorage. GitHub responses are validated at runtime, remote errors are normalised before display, and network requests have a fixed timeout.
 
-## Analysed Repository Sorting
+## Deployment
 
-The application analyses all public repositories in the dashboard, then sorts them to surface first:
+The public SPA is deployed on Vercel at [https://github-profileanalyser.vercel.app](https://github-profileanalyser.vercel.app).
 
-- non-archived projects;
-- projects with a clear description;
-- projects with a README;
-- projects with a demo;
-- recently updated projects;
-- projects with readable names and stacks.
+## License
 
-This keeps the dashboard readable while still showing every public repository on the profile.
-
-## README Analysis
-
-In `V2`, GitHub Profile Analyser inspects README content across all detected repositories.
-
-Signals checked:
-
-- installation section;
-- stack or technologies;
-- features;
-- screenshots or images;
-- demo link;
-- future improvements or roadmap;
-- overall document structure.
-
-Each analysed README receives a score out of `10`, then a level:
-
-- `basic README`
-- `solid README`
-- `professional README`
-
-## Recruiter Mode
-
-In `V3`, the application can review the same GitHub profile through a specific career goal.
-
-Available goals:
-
-- `Frontend apprenticeship`
-- `Fullstack apprenticeship`
-- `Web development internship`
-- `Junior React`
-
-This mode affects three things:
-
-- the overall scoring;
-- the recommendations;
-- the expected technologies highlighted for the recruiter.
-
-The dashboard also displays:
-
-- an estimated match;
-- the signals already visible;
-- missing technologies or signals that would better match the target role.
-
-## Screenshots
-
-### Empty State
-
-![Empty state](./docs/screenshots/empty-state.png)
-
-### Desktop Dashboard
-
-![Desktop dashboard](./docs/screenshots/dashboard-analysis.png)
-
-### Mobile Dashboard
-
-![Mobile dashboard](./docs/screenshots/dashboard-mobile.png)
-
-## Vercel Deployment
-
-The project is prepared for a simple Vercel deployment with [vercel.json](./vercel.json).
-
-Steps:
-
-1. import the GitHub repository into Vercel;
-2. let Vercel detect the Vite project;
-3. check that the build command is `npm run build`;
-4. check that the output directory is `dist`;
-5. launch the deployment.
-
-## Planned Improvements
-
-- `V4`: local analysis history;
-- `V5`: assisted portfolio text generation.
-
-## What the Project Demonstrates Technically
-
-- clear separation between UI, API services, types, and business utilities;
-- frontend management of external data;
-- scoring heuristic design;
-- visual presentation of a product diagnosis.
+No explicit open-source license is currently provided.
